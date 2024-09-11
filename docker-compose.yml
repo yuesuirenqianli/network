@@ -1,0 +1,10 @@
+services:
+  client:
+    build: "./Client"
+    ports:
+      - "9002:80"
+
+  server:
+    build: "./Server"
+    ports:
+      - "9001:9001"
