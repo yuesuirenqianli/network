@@ -1,9 +1,9 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/app.mjs",
   "scripts": {
-    "start": "node ./app.mjs"
+    "start": "node src/app.mjs"
   },
   "license": "ISC",
   "dependencies": {

@@ -1,6 +1,5 @@
-import { Sequelize, DataTypes } from "sequelize";
-
-export const sequelize = new Sequelize("sqlite:test.db");
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/database.mjs";
 
 export const User = sequelize.define(
   "User",
