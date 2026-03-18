@@ -7,13 +7,21 @@
     <link rel="stylesheet" href="./static/bootstrap.css" />
   </head>
   <body>
-    <div>
+    <div class="container mt-4">
+      <h2 class="mb-4">Web 安全与网络请求测试</h2>
       <login-test></login-test>
+      <cookie-test></cookie-test>
+      <xss-test></xss-test>
     </div>
 
     <script type="module">
       import LoginTest from "./components/login_test.js";
+      import CookieTest from "./components/cookie_test.js";
+      import XssTest from "./components/xss_test.js";
+
       customElements.define("login-test", LoginTest);
+      customElements.define("cookie-test", CookieTest);
+      customElements.define("xss-test", XssTest);
     </script>
   </body>
 </html>

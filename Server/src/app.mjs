@@ -15,7 +15,11 @@ import router from "./routes/index.mjs";
 
   // 3. 注册全局中间件
   app.use(errorHandler); // 异常捕获 (必须放在最前面)
-  app.use(cors()); // 处理跨域
+  app.use(
+    cors({
+      credentials: true, // 允许跨域携带 Cookie
+    })
+  ); // 处理跨域
   app.use(bodyparser()); // 解析 application/json
 
   // 4. 注册路由
