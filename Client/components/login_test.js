@@ -30,10 +30,11 @@ class LoginTest extends HTMLElement {
           基础测试组
         </div>
         <div class="container">
-          <button type="submit" class="btn btn-primary">点击登录</button>
+          <button type="button" id="login-btn" class="btn btn-primary">点击登录</button>
+          <button type="button" id="complex-btn" class="btn btn-warning ms-2">复杂请求 (触发 OPTIONS)</button>
           <div class="mt-3">
-            <p class="mb-1"><strong>用户名：</strong><span id="username" class="text-success">未登录</span></p>
-            <p class="mb-0"><strong>Email：</strong><span id="email" class="text-success">未登录</span></p>
+            <p class="mb-1"><strong>状态/用户名：</strong><span id="username" class="text-success">未登录</span></p>
+            <p class="mb-0"><strong>详情/Email：</strong><span id="email" class="text-success">未登录</span></p>
           </div>
         </div>
       </div>
@@ -41,8 +42,11 @@ class LoginTest extends HTMLElement {
   }
 
   bindEvents() {
-    const btn = this.shadowRoot.querySelector(".btn");
-    btn.addEventListener("click", () => this.login());
+    const loginBtn = this.shadowRoot.querySelector("#login-btn");
+    loginBtn.addEventListener("click", () => this.login());
+
+    const complexBtn = this.shadowRoot.querySelector("#complex-btn");
+    complexBtn.addEventListener("click", () => this.complexRequest());
   }
 
   async login() {
@@ -65,11 +69,38 @@ class LoginTest extends HTMLElement {
     }
   }
 
+  async complexRequest() {
+    try {
+      // 发送复杂请求 (Complex Request)
+      // 使用 PUT 方法，并携带自定义请求头，这会强制浏览器先发送 OPTIONS 预检请求
+      const res = await fetch(`${base_url}/sessions`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-token-123",
+          "X-Custom-Header": "Trigger-Options-Preflight",
+        },
+        body: JSON.stringify({
+          action: "test_options",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP 错误! 状态码: ${res.status}`);
+      }
+
+      const data = await res.json();
+      this.updateResult({ name: "复杂请求成功", email: JSON.stringify(data) });
+    } catch (err) {
+      this.updateResult({ name: "复杂请求失败", email: err.message });
+    }
+  }
+
   updateResult(data) {
     const usernameEl = this.shadowRoot.querySelector("#username");
     const emailEl = this.shadowRoot.querySelector("#email");
-    usernameEl.textContent = data.name;
-    emailEl.textContent = data.email;
+    usernameEl.textContent = data.name || "未知";
+    emailEl.textContent = data.email || data.toString();
   }
 }
 
