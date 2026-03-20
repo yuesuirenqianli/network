@@ -25,6 +25,9 @@
 - **路由**：`@koa/router` (处理 RESTful 路由映射)
 - **跨域**：`@koa/cors` (处理预检请求 OPTIONS 和跨域响应头)
 - **参数解析**：`@koa/bodyparser` (解析 JSON 格式的请求体)
+- **安全加固**：`koa-helmet` (设置安全 HTTP 头), `bcryptjs` (密码哈希), `jsonwebtoken` (JWT 鉴权)
+- **参数校验**：`zod` (声明式的 Schema 验证)
+- **配置管理**：`dotenv` (环境变量管理)
 - **ORM 与数据库**：`Sequelize` + `SQLite` (本地文件型数据库，无需额外安装)
 
 ```bash
@@ -32,27 +35,33 @@ Server/
 ├── package.json          # 项目依赖和脚本
 ├── Dockerfile            # 容器化部署配置
 ├── README_SERVER.md      # 服务端说明文档
+├── .env                  # 本地环境变量配置 (不应提交到代码仓库)
 ├── test.db               # SQLite 数据库文件 (通常建议放入 /data 目录并在 git 中 ignore)
 └── src/                  # 源代码根目录
     ├── app.mjs           # 应用入口文件：负责初始化中间件、挂载路由、启动服务
     │
     ├── config/           # 【配置层】
-    │   └── database.mjs  # 数据库连接配置、环境变量读取等
+    │   ├── env.mjs       # 集中读取与管理环境变量
+    │   └── database.mjs  # 数据库连接配置
     │
     ├── models/           # 【数据模型层 (M)】
     │   ├── index.mjs     # 负责 Sequelize 实例初始化和关联关系建立
     │   └── user.mjs      # User 表的 Schema 定义
     │
+    ├── services/         # 【业务逻辑层 (Service)】
+    │   └── session.mjs   # 核心业务逻辑 (如密码比对、JWT 签发)
+    │
     ├── controllers/      # 【控制层 (C)】
-    │   └── session.mjs   # 处理登录/登出的核心业务逻辑 (接收 req，返回 res)
+    │   └── session.mjs   # 处理 HTTP 请求/响应，调用 Service 层
     │
     ├── routes/           # 【路由层】
     │   ├── index.mjs     # 路由统一出口，汇总所有子路由
-    │   └── session.mjs   # 会话相关的路由定义 (如 POST /api/sessions)
+    │   └── session.mjs   # 会话相关的路由定义，集成参数校验 (Zod)
     │
     ├── middlewares/      # 【中间件层】
     │   ├── errorHandler.mjs # 全局错误捕获中间件
-    │   └── auth.mjs      # 身份验证/鉴权中间件 (如验证 Cookie/Token)
+    │   ├── validation.mjs   # 基于 Zod 的统一参数校验中间件
+    │   └── auth.mjs      # 基于 JWT 的身份验证/鉴权中间件
     │
     └── utils/            # 【工具层】
         └── response.mjs  # 统一的响应格式封装 (格式化 200/400/500 返回结构)
@@ -98,14 +107,16 @@ Server/
 
 **服务端处理请求生命周期（洋葱模型）：**
 
-1. **CORS 中间件**：拦截所有请求，如果是 `OPTIONS` 预检请求则直接返回允许跨域的 Headers；否则给响应附加上允许跨域的标记。
+1. **安全与基础中间件**：`koa-helmet` 设置安全头，`CORS` 处理跨域（动态匹配 `origin` 白名单）。
 2. **BodyParser 中间件**：读取 HTTP 报文流，将其转化为 JS 对象并挂载到 `ctx.request.body`。
 3. **Router 中间件**：根据请求的 Method 和 URI 匹配对应的路由处理函数。
-4. **业务逻辑层 (Controller)**：
-   - 提取参数并进行校验。
-   - 调用 ORM 层查询 SQLite 数据库（如 `User.findOne`）。
-   - 根据验证结果，设置 `ctx.status` (HTTP 状态码) 和 `ctx.body` (JSON 响应数据)。
-5. **响应返回**：沿洋葱模型向外穿透，最终将数据转化为 HTTP 响应报文发送给客户端。
+4. **验证中间件 (Validation)**：使用 `Zod` 进行严格的请求参数校验（包括 body, query, params），如果验证失败直接抛出异常返回 `400`。
+5. **鉴权中间件 (Auth)**：对受保护路由进行拦截，提取并验证 `JWT`，验证通过则将用户信息挂载到 `ctx.state.user`。
+6. **业务逻辑层 (Controller & Service)**：
+   - **Controller 层**：提取校验后的参数，并将其传递给 Service 层。
+   - **Service 层**：执行纯粹的业务逻辑（如 `bcrypt` 密码比对、查询 `SQLite` 数据库等）。
+   - **Controller 层**：接收 Service 层返回的结果，根据结果设置 `ctx.status` (HTTP 状态码)、下发 `HttpOnly Cookie` 和 `ctx.body` (JSON 响应数据)。
+7. **响应返回**：沿洋葱模型向外穿透，最终将数据转化为 HTTP 响应报文发送给客户端。
 
 ## 关联知识
 
